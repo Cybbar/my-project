@@ -1,0 +1,303 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "3758866e-74f3-4002-bf69-263daec4dbf8",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>label</th>\n",
+       "      <th>message</th>\n",
+       "      <th>label_num</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>ham</td>\n",
+       "      <td>Go until jurong point, crazy.. Available only ...</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>ham</td>\n",
+       "      <td>Ok lar... Joking wif u oni...</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>spam</td>\n",
+       "      <td>Free entry in 2 a wkly comp to win FA Cup fina...</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>ham</td>\n",
+       "      <td>U dun say so early hor... U c already then say...</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>ham</td>\n",
+       "      <td>Nah I don't think he goes to usf, he lives aro...</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "  label                                            message  label_num\n",
+       "0   ham  Go until jurong point, crazy.. Available only ...          0\n",
+       "1   ham                      Ok lar... Joking wif u oni...          0\n",
+       "2  spam  Free entry in 2 a wkly comp to win FA Cup fina...          1\n",
+       "3   ham  U dun say so early hor... U c already then say...          0\n",
+       "4   ham  Nah I don't think he goes to usf, he lives aro...          0"
+      ]
+     },
+     "execution_count": 1,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import pandas as pd\n",
+    "import urllib.request\n",
+    "import zipfile\n",
+    "import os\n",
+    "\n",
+    "# Download and extract the dataset\n",
+    "url = \"https://archive.ics.uci.edu/ml/machine-learning-databases/00228/smsspamcollection.zip\"\n",
+    "zip_path = \"smsspamcollection.zip\"\n",
+    "data_dir = \"sms_data\"\n",
+    "\n",
+    "# Download if not already present\n",
+    "if not os.path.exists(zip_path):\n",
+    "    urllib.request.urlretrieve(url, zip_path)\n",
+    "\n",
+    "# Extract\n",
+    "if not os.path.exists(data_dir):\n",
+    "    with zipfile.ZipFile(zip_path, 'r') as zip_ref:\n",
+    "        zip_ref.extractall(data_dir)\n",
+    "\n",
+    "# Load dataset\n",
+    "df = pd.read_csv(os.path.join(data_dir, 'SMSSpamCollection'), sep='\\t', names=['label', 'message'])\n",
+    "df['label_num'] = df['label'].map({'ham': 0, 'spam': 1})\n",
+    "\n",
+    "df.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "70436aa6-5fa1-46c3-b969-7dc2f86b6e90",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from sklearn.model_selection import train_test_split\n",
+    "from sklearn.feature_extraction.text import TfidfVectorizer\n",
+    "\n",
+    "# Convert labels spam= 1, ham=0\n",
+    "df['label_num'] = df['label'].map({'ham': 0,  'spam': 1})\n",
+    "\n",
+    "X = df['message']\n",
+    "y = df['label_num']\n",
+    "\n",
+    "X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)\n",
+    "                                                   \n",
+    "vectorizer = TfidfVectorizer(stop_words='english')\n",
+    "X_train_vec = vectorizer.fit_transform(X_train)\n",
+    "X_test_vec = vectorizer.transform(X_test)           "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "fd2865c1-f454-4602-a991-5ade7b81c78e",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[[966   0]\n",
+      " [ 34 115]]\n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.97      1.00      0.98       966\n",
+      "           1       1.00      0.77      0.87       149\n",
+      "\n",
+      "    accuracy                           0.97      1115\n",
+      "   macro avg       0.98      0.89      0.93      1115\n",
+      "weighted avg       0.97      0.97      0.97      1115\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "from sklearn.linear_model import LogisticRegression\n",
+    "from sklearn.metrics import classification_report, confusion_matrix\n",
+    "\n",
+    "\n",
+    "model = LogisticRegression(max_iter=1000)\n",
+    "model.fit(X_train_vec, y_train)\n",
+    "\n",
+    "y_pred = model.predict(X_test_vec)\n",
+    "\n",
+    "print(confusion_matrix(y_test, y_pred))\n",
+    "print(classification_report(y_test, y_pred))\n",
+    "      "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "14058fe3-772b-44e6-85a4-c4e184fd1522",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "NOT SPAM\n",
+      "NOT SPAM\n",
+      "NOT SPAM\n"
+     ]
+    }
+   ],
+   "source": [
+    "def predict_message(msg):\n",
+    "    vec_msg = vectorizer.transform([msg])\n",
+    "    prediction = model.predict(vec_msg)[0]\n",
+    "    return \"SPAM\" if prediction ==  1 else \"NOT SPAM\"\n",
+    "\n",
+    "print(predict_message(\"Congratulations! You've been selected for a $1000 gift card! Click here to claim now.\"))\n",
+    "print(predict_message(\"Are we still meeting at 5 PM?\"))\n",
+    "print(predict_message(\"Hey, are we still on for lunch today?\"))\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "2825b3fc-4adf-4086-b149-f034d3a98560",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "NOT SPAM (confidence: 71.52%)\n"
+     ]
+    }
+   ],
+   "source": [
+    "def predict_with_confidence(msg):\n",
+    "    vec = vectorizer.transform([msg]) \n",
+    "\n",
+    "    # Ensure scalar outputs\n",
+    "    prediction_array = model.predict(vec)\n",
+    "    prediction = int(prediction_array[0])\n",
+    "    \n",
+    "    prob_array = model.predict_proba(vec)[0]\n",
+    "    confidence = float(prob_array[prediction])\n",
+    "\n",
+    "    label = 'SPAM' if prediction == 1 else \"NOT SPAM\"\n",
+    "    return label, round(confidence * 100, 2)\n",
+    "\n",
+    "label, confidence = predict_with_confidence(\"Free tickets now! Click the link.\")\n",
+    "print(f\"{label} (confidence: {confidence}%)\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "c14d8d85-956b-4712-83c2-77e77bdad189",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import tkinter as tk\n",
+    "from tkinter import messagebox\n",
+    "\n",
+    "def run_gui():\n",
+    "    def on_predict():\n",
+    "        message = input_text.get(\"1.0\", tk.END).strip()\n",
+    "        if not message:\n",
+    "            messagebox.showwarning(\"Input Needed\", \"Please enter a message to classify.\")\n",
+    "            return\n",
+    "        label, confidence = predict_with_confidence(message)\n",
+    "        result_label.config(text=f\"{label} ({confidence}%)\", fg=\"green\" if label == \"NOT SPAM\" else \"red\")\n",
+    "\n",
+    "    # Create window\n",
+    "    root = tk.Tk()\n",
+    "    root.title(\"SMS Spam Classifier\")\n",
+    "    root.geometry(\"500x300\")\n",
+    "\n",
+    "    # Input box\n",
+    "    tk.Label(root, text=\"Enter your message:\", font=(\"Helvetica\", 12)).pack(pady=10)\n",
+    "    input_text = tk.Text(root, height=5, width=50)\n",
+    "    input_text.pack()\n",
+    "\n",
+    "    # Predict button\n",
+    "    tk.Button(root, text=\"Predict\", command=on_predict, font=(\"Helvetica\", 12), bg=\"blue\", fg=\"white\").pack(pady=10)\n",
+    "\n",
+    "    # Output label\n",
+    "    result_label = tk.Label(root, text=\"\", font=(\"Helvetica\", 14, \"bold\"))\n",
+    "    result_label.pack(pady=10)\n",
+    "\n",
+    "    root.mainloop()\n",
+    "\n",
+    "run_gui()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "55310b56-0ff3-4a11-97d6-fe399e3c9cdc",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.11.7"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
